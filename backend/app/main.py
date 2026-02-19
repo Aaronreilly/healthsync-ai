@@ -1,7 +1,6 @@
-"""
-Main FastAPI application with Gemini and static frontend
-File: backend/app/main.py
-"""
+import os
+import sys
+from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -61,7 +60,11 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 # Serve the main HTML page
 @app.get("/", response_class=HTMLResponse)
 async def get_index():
-    with open("static/index.html", "r", encoding="utf-8") as f:
+    # Get the absolute path to the static folder
+    static_dir = Path(__file__).parent.parent / "static"
+    index_path = static_dir / "index.html"
+    
+    with open(index_path, "r", encoding="utf-8") as f:
         return f.read()
 
 # API Endpoints
