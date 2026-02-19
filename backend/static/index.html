@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HealthSync AI with Gemini</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .status {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 15px;
+            background: #e8f5e8;
+            border-radius: 10px;
+            color: #2e7d32;
+            display: none;
+        }
+        .status.show {
+            display: block;
+        }
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        .card h2 {
+            color: #555;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .card-content {
+            min-height: 150px;
+            max-height: 300px;
+            overflow-y: auto;
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #333;
+            white-space: pre-wrap;
+            margin-bottom: 15px;
+        }
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: background 0.2s;
+            width: 100%;
+        }
+        .btn:hover {
+            background: #5a67d8;
+        }
+        .btn:disabled {
+            background: #a0aec0;
+            cursor: not-allowed;
+        }
+        .compression-result {
+            background: #f0f4f8;
+            padding: 15px;
+            border-radius: 10px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #ccc;
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            margin-right: 8px;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .flex {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            color: #888;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 HealthSync AI with Gemini</h1>
+        <div id="status" class="status"></div>
+
+        <div class="card-grid">
+            <!-- Nutrition Card -->
+            <div class="card">
+                <h2>🍎 Nutrition Plan</h2>
+                <div id="nutrition-content" class="card-content">
+                    Click "Generate Meal Plan" to get AI recommendations.
+                </div>
+                <button id="nutrition-btn" class="btn" onclick="getNutritionPlan()">Generate Meal Plan</button>
+            </div>
+
+            <!-- Exercise Card -->
+            <div class="card">
+                <h2>💪 Workout Plan</h2>
+                <div id="exercise-content" class="card-content">
+                    Click "Generate Workout Plan" to get AI recommendations.
+                </div>
+                <button id="exercise-btn" class="btn" onclick="getExercisePlan()">Generate Workout Plan</button>
+            </div>
+
+            <!-- Sleep Card -->
+            <div class="card">
+                <h2>😴 Sleep Advice</h2>
+                <div id="sleep-content" class="card-content">
+                    Click "Get Sleep Advice" to get AI tips.
+                </div>
+                <button id="sleep-btn" class="btn" onclick="getSleepAdvice()">Get Sleep Advice</button>
+            </div>
+
+            <!-- Compression Card -->
+            <div class="card">
+                <h2>📦 ScaleDown Compression</h2>
+                <div id="compression-content" class="card-content">
+                    Click "Compress Data" to see 80% compression demo.
+                </div>
+                <button id="compress-btn" class="btn" onclick="compressData()">Compress Data</button>
+            </div>
+        </div>
+
+        <!-- AI Coach Message -->
+        <div class="card">
+            <h2>💬 AI Health Coach</h2>
+            <div id="coach-content" class="card-content">
+                Your personal AI coach will appear here after you take actions.
+            </div>
+            <button id="coach-btn" class="btn" onclick="getCoachMessage()">Get Motivational Message</button>
+        </div>
+
+        <div class="footer">
+            Powered by Google Gemini AI • ScaleDown Compression
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+
+        function showStatus(message, isError = false) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = message;
+            statusDiv.style.background = isError ? '#ffebee' : '#e8f5e8';
+            statusDiv.style.color = isError ? '#c62828' : '#2e7d32';
+            statusDiv.classList.add('show');
+            setTimeout(() => statusDiv.classList.remove('show'), 5000);
+        }
+
+        async function callAPI(endpoint, params = {}) {
+            const url = new URL(`${API_BASE}${endpoint}`);
+            Object.keys(params).forEach(key => url.searchParams.append(key, params[key]));
+            
+            const response = await fetch(url, { method: 'POST' });
+            if (!response.ok) {
+                throw new Error(`API error: ${response.status}`);
+            }
+            return await response.json();
+        }
+
+        async function getNutritionPlan() {
+            const btn = document.getElementById('nutrition-btn');
+            const contentDiv = document.getElementById('nutrition-content');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading"></span> Generating...';
+            contentDiv.textContent = 'Asking Gemini for a personalized meal plan...';
+            try {
+                const data = await callAPI('/api/nutrition/plan', { calorie_target: 2000 });
+                contentDiv.textContent = data.plan;
+                showStatus('✅ Meal plan generated!');
+                // Also update coach with context
+                await getCoachMessageWithContext("I just got a new meal plan.");
+            } catch (error) {
+                contentDiv.textContent = 'Error: ' + error.message;
+                showStatus('❌ Failed to get meal plan', true);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Generate Meal Plan';
+            }
+        }
+
+        async function getExercisePlan() {
+            const btn = document.getElementById('exercise-btn');
+            const contentDiv = document.getElementById('exercise-content');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading"></span> Generating...';
+            contentDiv.textContent = 'Asking Gemini for a workout plan...';
+            try {
+                const data = await callAPI('/api/exercise/plan', { fitness_level: 'intermediate' });
+                contentDiv.textContent = data.plan;
+                showStatus('✅ Workout plan generated!');
+                await getCoachMessageWithContext("I just got a new workout plan.");
+            } catch (error) {
+                contentDiv.textContent = 'Error: ' + error.message;
+                showStatus('❌ Failed to get workout plan', true);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Generate Workout Plan';
+            }
+        }
+
+        async function getSleepAdvice() {
+            const btn = document.getElementById('sleep-btn');
+            const contentDiv = document.getElementById('sleep-content');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading"></span> Getting advice...';
+            contentDiv.textContent = 'Asking Gemini for sleep tips...';
+            try {
+                const data = await callAPI('/api/sleep/advice', { avg_hours: 7.2 });
+                contentDiv.textContent = data.advice;
+                showStatus('✅ Sleep advice received!');
+                await getCoachMessageWithContext("I just received sleep improvement tips.");
+            } catch (error) {
+                contentDiv.textContent = 'Error: ' + error.message;
+                showStatus('❌ Failed to get sleep advice', true);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Get Sleep Advice';
+            }
+        }
+
+        async function compressData() {
+            const btn = document.getElementById('compress-btn');
+            const contentDiv = document.getElementById('compression-content');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading"></span> Compressing...';
+            contentDiv.textContent = 'Running ScaleDown compression on 365 days of health data...';
+            try {
+                const data = await callAPI('/api/compress');
+                contentDiv.innerHTML = `
+                    <strong>Compression Results:</strong><br>
+                    Original: ${data.original_size_kb.toFixed(2)} KB<br>
+                    Compressed: ${data.compressed_size_kb.toFixed(2)} KB<br>
+                    Ratio: ${data.compression_ratio}<br>
+                    Savings: ${data.savings}
+                `;
+                showStatus(`✅ Compression achieved ${data.compression_ratio}`);
+            } catch (error) {
+                contentDiv.textContent = 'Error: ' + error.message;
+                showStatus('❌ Compression failed', true);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Compress Data';
+            }
+        }
+
+        async function getCoachMessageWithContext(context = "I just used the health app.") {
+            const btn = document.getElementById('coach-btn');
+            const contentDiv = document.getElementById('coach-content');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading"></span> Thinking...';
+            try {
+                const response = await fetch(`${API_BASE}/api/coach/message?context=${encodeURIComponent(context)}`, { method: 'POST' });
+                const data = await response.json();
+                contentDiv.textContent = data.message;
+            } catch (error) {
+                contentDiv.textContent = 'Coach: ' + error.message;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Get Motivational Message';
+            }
+        }
+
+        async function getCoachMessage() {
+            await getCoachMessageWithContext("I want some motivation to stay healthy.");
+        }
+
+        // Optional: auto-load something on page load
+        window.onload = () => {
+            // getCoachMessageWithContext("I just opened the health dashboard.");
+        };
+    </script>
+</body>
+</html>
