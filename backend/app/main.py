@@ -110,5 +110,13 @@ async def get_coach_message(context: str):
     message = app.state.gemini.generate_health_coach_message(context)
     return {"message": message}
 
+@app.post("/api/chat")
+async def chat_with_gemini(message: str):
+    """Simple chat endpoint – sends user message to Gemini and returns response."""
+    response = app.state.gemini.generate_response(message)
+    return {"response": response}
+
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+
+    
